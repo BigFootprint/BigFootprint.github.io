@@ -1,0 +1,61 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="李全民的个人博客"><title>UI优化 | 蜗牛壳</title><link rel="stylesheet" type="text/css" href="/css/style.css?v=1.0.0"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/normalize/6.0.0/normalize.min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/0.6.2/pure-min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/0.6.2/grids-responsive-min.css"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.bootcss.com/jquery/3.2.1/jquery.min.js"></script><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"><script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+ga('create','UA-65882749-1','auto');ga('send','pageview');</script></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">UI优化</h1><a id="logo" href="/.">蜗牛壳</a><p class="description">计算机只有 0 和 1 ，但世界是连续的</p></div><div id="nav-menu"><a href="/." class="current"><i class="fa fa-home"> 首页</i></a><a href="/archives/"><i class="fa fa-archive"> 归档</i></a><a href="/about/"><i class="fa fa-user"> 关于</i></a></div></div><div id="layout" class="pure-g"><div class="pure-u-1 pure-u-md-3-4"><div class="content_container"><div class="post"><h1 class="post-title">UI优化</h1><div class="post-meta">May 10, 2016<span> | </span><span class="category"><a href="/categories/Android/">Android</a></span></div><div class="post-content"><h2 id="Overdraw-Debugger"><a href="#Overdraw-Debugger" class="headerlink" title="Overdraw Debugger"></a>Overdraw Debugger</h2><p>过度绘制的诊断可以直接使用手机的开发人员功能支持：</p>
+<ol>
+<li>打开设置——&gt;开发人员选项；</li>
+<li>找到”Debug GPU Overdraw”；</li>
+<li>点击该项，选择”Show ovedraw areas”；</li>
+</ol>
+<p>这个时候你的屏幕就变得五颜六色了：</p>
+<ol>
+<li>真实色彩：没有过度绘制；</li>
+<li>蓝色：过度绘制一次；</li>
+<li>绿色：过度绘制两次；</li>
+<li>粉色：过度绘制三次；</li>
+<li>红色：过度绘制四次以及以上；</li>
+</ol>
+<p>有些过度绘制是不可避免的，我们的目标就是尽量让我们的App展现真实色彩或者蓝色。<a id="more"></a></p>
+<h2 id="Rendering-Profiler"><a href="#Rendering-Profiler" class="headerlink" title="Rendering Profiler"></a>Rendering Profiler</h2><p>Profile GPU Rendering使得开发者可以方便地知道系统是否正在以16ms每帧的速度绘制当前UI，并且可以查看是哪一个绘制的步骤超时。使用方式如下:</p>
+<ol>
+<li>打开设置——&gt;开发人员选项；</li>
+<li>找到”Profile GPU Rendering”；</li>
+<li>点击打开弹窗，选择”On screen as bars”；</li>
+</ol>
+<p>你的屏幕上底部就会出现彩色的线条:</p>
+<div align="center"><img src="http://7xktd8.com1.z0.glb.clouddn.com/gettingstarted_image002.png" height="320" alt="Screen when Profile GPU Rendering is on"></div>
+
+<p>详细的含义如下:</p>
+<p><div align="center"><img src="http://7xktd8.com1.z0.glb.clouddn.com/gettingstarted_image003.png" height="160" alt="Screen when Profile GPU Rendering is on"></div><br>绿色的横线代表16ms/帧的上限（所有的竖线都应该在这条线之下，超过这条线则可能意味着动画的卡顿），而每条竖线则包含着蓝色，紫色(只有4.0以及以上版本才有)，红色以及橙色，它们代表着一次绘制的几个过程</p>
+<ol>
+<li>蓝线代表用于创建/更新View的display list的时间，如果一根竖线的这部分很高，可能就意味着有很多的自定义View需要绘制，或者在<code>onDraw()</code>方法里面执行了太多的任务；</li>
+<li>紫色(只有4.0以及以上版本才有)代表将资源传送到render线程所花费时间；</li>
+<li>红色代表Android的2D render发送命令到OpenGL来绘制或者重绘display list所花费的时间，越多的display list意味着更高的红线；</li>
+<li>橙色代表CPU等待GPU完成任务的时间，如果这段线很长，那就意味着App在GPU上做了太多的工作；</li>
+</ol>
+<blockquote>
+<p>虽然这个工具叫做<code>Profile GPU Rendering</code>，但实际上监控的任务都在CPU上面，渲染是通过提交命令给GPU来实现的，GPU异步去渲染屏幕。在某些情况下，GPU有太多的任务需要去做，就需要CPU等待一段时间再去提交命令，当这种情况发生的时候，就可以看到很长的Process(橙色)和Execute(红色)线，命令的提交会阻塞，直到GPU命令队列里面有足够的空间容纳新的命令。</p>
+</blockquote>
+<p>优化通用手法：降低ViewTree层级。</p>
+<h2 id="Hierarchy-Viewer"><a href="#Hierarchy-Viewer" class="headerlink" title="Hierarchy Viewer"></a>Hierarchy Viewer</h2><p>这个工具可以可视化App的View结构，并且标注每一个View的渲染速度。我们可以使用这个工具：</p>
+<ol>
+<li>降低层级，减少过度绘制；</li>
+<li>找到潜在的渲染性能瓶颈；</li>
+</ol>
+<p>使用前提条件:</p>
+<ol>
+<li>必须使用真机来获得准确数据；</li>
+<li>在机器上设置一个<code>ANDROID_HVPROTO</code>变量（<a href="http://developer.android.com/intl/zh-cn/tools/performance/hierarchy-viewer/setup.html" target="_blank" rel="noopener">配置文档</a>）；</li>
+</ol>
+<p>具体的过程参见<a href="http://developer.android.com/intl/zh-cn/tools/performance/hierarchy-viewer/profiling.html" target="_blank" rel="noopener">官网</a>。</p>
+<p>每一个View都可以通过Profile产生三个小点，分别代表Draw、Layout、Execute三个过程。三个点都可以由三种颜色，绿色表示至少比其余一半的View快，黄色表示不是最慢的那一半View，红色表示是最慢的那一半View。</p>
+<h4 id="解析"><a href="#解析" class="headerlink" title="解析"></a>解析</h4><p>因为Hierarchy Viewer衡量的是相对性能，因此整个Tree中总是有红点，因此红色并不代表很慢。下面讲述一些处理红点View的办法:</p>
+<ol>
+<li>找到那些处于叶子节点或者拥有很少子View的ViewGroup，这类View很可能存在问题，使用Systrace或者TraceView可以获得更多信息；</li>
+<li>如果一个ViewGroup带有很多的子View，并且显示红色，可以看一下子View的性能如何；</li>
+<li>一个显示黄色甚至红色的View在设备上运行并不一定慢；</li>
+<li>根View有一个红色的measure阶段，红色的layout阶段以及黄色的绘制阶段是很正常的；</li>
+<li>如果一个叶子结点在一个有20个以上的View的Tree中显示红色，这很可能就意味着发生了问题，可以好好看一下<code>onDraw()</code>方法；</li>
+</ol>
+</div><div class="tags"><a href="/tags/性能优化/">性能优化</a><a href="/tags/工具/">工具</a></div><div class="post-nav"><a href="/2016/05/10/Android-Systrace/" class="pre">Systrace</a><a href="/2016/05/09/Android-Memory-Profilers/" class="next">Memory Profilers</a></div></div></div></div><div class="pure-u-1-4 hidden_mid_and_down"><div id="sidebar"><div class="widget"><div class="widget-title"><i class="fa fa-folder-o"> 分类</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Android/">Android</a><span class="category-list-count">59</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Java/">Java</a><span class="category-list-count">7</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/ReactiveX/">ReactiveX</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/iOS/">iOS</a><span class="category-list-count">9</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/后端/">后端</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/工具/">工具</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/影视/">影视</a><span class="category-list-count">6</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/技术/">技术</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/电影/">电影</a><span class="category-list-count">2</span></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-star-o"> 标签</i></div><div class="tagcloud"><a href="/tags/Gitbook/" style="font-size: 15px;">Gitbook</a> <a href="/tags/Runtime/" style="font-size: 15px;">Runtime</a> <a href="/tags/视图/" style="font-size: 15px;">视图</a> <a href="/tags/Android/" style="font-size: 15px;">Android</a> <a href="/tags/权限/" style="font-size: 15px;">权限</a> <a href="/tags/代码优化/" style="font-size: 15px;">代码优化</a> <a href="/tags/Framework/" style="font-size: 15px;">Framework</a> <a href="/tags/性能优化/" style="font-size: 15px;">性能优化</a> <a href="/tags/工具/" style="font-size: 15px;">工具</a> <a href="/tags/合集/" style="font-size: 15px;">合集</a> <a href="/tags/ADB/" style="font-size: 15px;">ADB</a> <a href="/tags/源码/" style="font-size: 15px;">源码</a> <a href="/tags/反编译/" style="font-size: 15px;">反编译</a> <a href="/tags/iOS/" style="font-size: 15px;">iOS</a> <a href="/tags/Gradle/" style="font-size: 15px;">Gradle</a> <a href="/tags/Hexo/" style="font-size: 15px;">Hexo</a> <a href="/tags/基础/" style="font-size: 15px;">基础</a> <a href="/tags/效率/" style="font-size: 15px;">效率</a> <a href="/tags/MarkDown/" style="font-size: 15px;">MarkDown</a> <a href="/tags/电影/" style="font-size: 15px;">电影</a> <a href="/tags/Reactive/" style="font-size: 15px;">Reactive</a> <a href="/tags/AIDL/" style="font-size: 15px;">AIDL</a> <a href="/tags/Linux/" style="font-size: 15px;">Linux</a> <a href="/tags/驱动/" style="font-size: 15px;">驱动</a> <a href="/tags/Java/" style="font-size: 15px;">Java</a> <a href="/tags/日志/" style="font-size: 15px;">日志</a> <a href="/tags/事件/" style="font-size: 15px;">事件</a> <a href="/tags/代码设计/" style="font-size: 15px;">代码设计</a> <a href="/tags/网络/" style="font-size: 15px;">网络</a> <a href="/tags/测试/" style="font-size: 15px;">测试</a> <a href="/tags/Binder/" style="font-size: 15px;">Binder</a> <a href="/tags/Groovy/" style="font-size: 15px;">Groovy</a> <a href="/tags/Loader/" style="font-size: 15px;">Loader</a> <a href="/tags/RAC/" style="font-size: 15px;">RAC</a> <a href="/tags/事件处理/" style="font-size: 15px;">事件处理</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-file-o"> 最近文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2017/10/30/AIDL-原理分析/">AIDL 原理分析</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/30/App-启动过程/">App 启动过程</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/29/PMS-解析/">PMS 解析</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/29/WMS-解析/">WindowManagerService 解析</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/29/AMS-解析/">AMS 解析</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/09/10/The-Good-Wife/">The-Good-Wife</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/09/10/Black-Sails/">黑帆</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/06/29/hello-world/">Hello World</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/03/23/XCode-8-2-1-ClangFormat-插件安装/">XCode 8.2.1 ClangFormat 插件安装</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/03/07/SourceTree-分支图谱/">SourceTree 分支图谱</a></li></ul></div></div></div><div class="pure-u-1 pure-u-md-3-4"><div id="footer">Copyright © 2018 <a href="/." rel="nofollow">蜗牛壳.</a> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a><a rel="nofollow" target="_blank" href="https://github.com/tufu9441/maupassant-hexo"> Theme</a> by<a rel="nofollow" target="_blank" href="https://github.com/pagecho"> Cho.</a></div></div></div><a id="rocket" href="#top" class="show"></a><script type="text/javascript" src="/js/totop.js?v=1.0.0" async></script><script type="text/javascript" src="/js/codeblock-resizer.js?v=1.0.0"></script><script type="text/javascript" src="/js/smartresize.js?v=1.0.0"></script></div></body></html>

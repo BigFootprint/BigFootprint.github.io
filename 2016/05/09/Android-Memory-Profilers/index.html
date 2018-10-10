@@ -1,0 +1,71 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="李全民的个人博客"><title>Memory Profilers | 蜗牛壳</title><link rel="stylesheet" type="text/css" href="/css/style.css?v=1.0.0"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/normalize/6.0.0/normalize.min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/0.6.2/pure-min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/0.6.2/grids-responsive-min.css"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.bootcss.com/jquery/3.2.1/jquery.min.js"></script><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"><script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+ga('create','UA-65882749-1','auto');ga('send','pageview');</script></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">Memory Profilers</h1><a id="logo" href="/.">蜗牛壳</a><p class="description">计算机只有 0 和 1 ，但世界是连续的</p></div><div id="nav-menu"><a href="/." class="current"><i class="fa fa-home"> 首页</i></a><a href="/archives/"><i class="fa fa-archive"> 归档</i></a><a href="/about/"><i class="fa fa-user"> 关于</i></a></div></div><div id="layout" class="pure-g"><div class="pure-u-1 pure-u-md-3-4"><div class="content_container"><div class="post"><h1 class="post-title">Memory Profilers</h1><div class="post-meta">May 9, 2016<span> | </span><span class="category"><a href="/categories/Android/">Android</a></span></div><div class="post-content"><p>关于内存，Android提供了三个工具：</p>
+<ol>
+<li>Memory Monitor: 可以找出是否有异常的GC操作导致性能问题； </li>
+<li>Heap Viewer: 可以找出被意外分配或者内存泄露的对象；</li>
+<li>Allocation Tracker: 找出存在内存问题的代码；</li>
+</ol>
+<p>现在Android Stuido的Android Monitor面板已经集成了这三个工具，比起使用Android Device Monitor来更加方便快捷。如下图:<a id="more"></a></p>
+<p><img src="http://7xktd8.com1.z0.glb.clouddn.com/Android-Monitor.png" alt="Android Monitor"></p>
+<blockquote>
+<p>Android Monitor不仅可以查看内存分配，还可以查看CPU、GPU、Network活动。</p>
+</blockquote>
+<h2 id="Memory-Monitor"><a href="#Memory-Monitor" class="headerlink" title="Memory Monitor"></a>Memory Monitor</h2><p>这是一个很简单的工具，就在Android Studio的Android Monitor里面，也即上图中的<code>D</code>处。在<code>A</code>处选中设备，在<code>B</code>处选中进程，就可以在<code>D</code>处查看应用的内存使用情况。更详细的教程可以看<a href="http://developer.android.com/intl/zh-cn/tools/performance/memory-monitor/index.html" target="_blank" rel="noopener">官网文档</a>。</p>
+<p>在<a href="http://www.csdn.net/article/2015-01-20/2823621-android-performance-patterns/2" target="_blank" rel="noopener">Android性能优化典范（一）</a>第九段中专门提到了一种内存现象，是可以从Memory Monitor中很容易看出来的——内存抖动：短时间发生了多次内存的涨跌。</p>
+<h2 id="Heap-Viewer"><a href="#Heap-Viewer" class="headerlink" title="Heap Viewer"></a>Heap Viewer</h2><p>Heap Viewer展现了某一时刻内存分配的对象的快照，可以用于发现哪些对象发生了内存泄露。</p>
+<p>在<a href="http://developer.android.com/intl/zh-cn/tools/performance/heap-viewer/index.html#WhatYouNeed" target="_blank" rel="noopener">官网</a>上是展示了该工具的使用步骤，简述如下：</p>
+<ol>
+<li>首先安装MAT(<a href="http://www.eclipse.org/mat/downloads.php" target="_blank" rel="noopener">下载地址</a>)；</li>
+<li>在Android Studio中打开Android Device Monitor或者DDMS；</li>
+<li>选择需要测试的进程；</li>
+<li>在进程列表上方点击Update Heap按钮；</li>
+<li>在右边的面板中选择Heap Tab；</li>
+<li>点击Cause GC；</li>
+<li>点击进程列表上方的Dump HPROF按钮，保存HPROF文件；</li>
+<li>运行命令进行文件转换：<code>./hprof-conv path/file.hprof exitPath/heap-converted.hprof</code>（hprof-conv命令在sdk的platform-tools目录下面）</li>
+<li>使用MAT打开这个文件；</li>
+</ol>
+<blockquote>
+<p>翻译自: <a href="http://stackoverflow.com/questions/24547555/how-to-analyze-memory-using-android-studio" target="_blank" rel="noopener">How to analyze memory using android studio-StackOverFlow</a></p>
+</blockquote>
+<p>但是Android Studio 1.2.x已经将该功能集合到Android Monitor面板中了：<code>C</code>处有三个按钮，第一个按钮就可以触发GC操作，第二个按钮就是Dump Java Heap。生成的文件是上面第7步生成的文件，但是转换不需要进行第8步，如图:</p>
+<div align="center"><img src="http://7xktd8.com1.z0.glb.clouddn.com/hprof.png" height="160" alt="HPROF"></div>
+
+<p>只需要点击Captures边栏，选中生成的原始hprof文件，右击选择”Export to standard .hprof”文件即可生成标准的hprof文件，然后在用MAT打开文件即可。</p>
+<p>具体的分析过程可以参见:</p>
+<ol>
+<li><a href="http://wiki.eclipse.org/MemoryAnalyzer" target="_blank" rel="noopener">MemoryAnalyzer</a></li>
+<li><a href="http://www.jianshu.com/p/d8e247b1e7b2" target="_blank" rel="noopener">MAT使用入门</a></li>
+<li><a href="http://kohlerm.blogspot.jp/" target="_blank" rel="noopener">Markus Kohler博客</a></li>
+<li><a href="http://android-developers.blogspot.jp/2011/03/memory-analysis-for-android.html" target="_blank" rel="noopener">Memory Analysis for Android Applications</a></li>
+<li><a href="http://eclipsesource.com/blogs/2013/01/21/10-tips-for-using-the-eclipse-memory-analyzer/" target="_blank" rel="noopener">10 Tips for using the Eclipse Memory Analyzer</a></li>
+</ol>
+<p>使用这个工具找寻内存泄露问题是没有一个准则的，需要对自己的程序比较了解（参见<a href="https://www.youtube.com/watch?v=_CruQY55HOk" target="_blank" rel="noopener">Google I/O视频</a>）。从实际开发经验来说，遵循一定的开发规则，在使用异步线程、静态变量、内部类等技术的时候多加注意是更好的办法。</p>
+<h2 id="Allocation-Tracker"><a href="#Allocation-Tracker" class="headerlink" title="Allocation Tracker"></a>Allocation Tracker</h2><p>一大利器，可以做的事情如下：</p>
+<ol>
+<li>展示在什么时候什么地方分配了什么样子的对象，对象的大小，分配的线程以及栈信息；</li>
+<li>通过重复进行分配、释放动作帮助分析内存抖动；</li>
+<li>可以和Heap Viewer结合分析内存泄露；</li>
+</ol>
+<p>但是是需要时间来学习分析统计数据和报表的。</p>
+<p>它的使用同样是既可以在Android Monitor中进行，也可以在Android Device Monitor中进行的。前者只需要两次点击<code>C</code>处的第三个按钮即可，后者则稍微麻烦一些。具体可参考:</p>
+<ol>
+<li><a href="http://developer.android.com/intl/zh-cn/tools/performance/allocation-tracker/index.html" target="_blank" rel="noopener">官网</a></li>
+<li><a href="http://blog.csdn.net/p106786860/article/details/9248693" target="_blank" rel="noopener">使用Allocation tracker跟踪Android应用内存分配</a></li>
+</ol>
+<p>在Android Device Monitor中查看数据，个人感觉比较清晰：</p>
+<p><img src="http://7xktd8.com1.z0.glb.clouddn.com/Allocaition-TrackerB.png" alt="Android Monitor"><br>可以看到中间红框展现了所有分配的对象，对象的分配顺序、大小、类型、所属线程，在哪个类的哪个方法中被分配，都非常清楚。</p>
+<p>选中一行之后，就可以在下面看到详细的堆栈信息。而关于Android Monitor的图标解析，可以查看<a href="http://blog.csdn.net/itfootball/article/details/48750849" target="_blank" rel="noopener">Android性能专项测试之Allocation Tracker(Android Studio)</a>。</p>
+<h2 id="内存使用分析"><a href="#内存使用分析" class="headerlink" title="内存使用分析"></a>内存使用分析</h2><p>具体可以参考<a href="http://developer.android.com/intl/zh-cn/tools/debugging/debugging-memory.html" target="_blank" rel="noopener">官网文章</a>，这里还有<a href="http://android.jobbole.com/80926/" target="_blank" rel="noopener">翻译</a>。</p>
+<p>总结一下，主要分析手段有：</p>
+<ol>
+<li>解析GC日志信息：主要关注<code>&lt;Heap_stats&gt;</code>，如果值一直增大并且不会减小下来，那么就可能有内存泄露了；</li>
+<li>查看堆的更新：Heap视图显示了堆内存使用的基本状况，每次垃圾回收后会更新，可以看分配的内存是否在增长；</li>
+<li>跟踪内存分配：查看对象的分配情况；</li>
+<li>查看总体内存分配：通过命令<code>adb shell dumpsys meminfo &lt;package_name|pid&gt; [-d]</code>可以查看进程中活动的根视图的数量和当前驻留在进程中的Context和Activity对象的数量；</li>
+<li>获取堆转储：查看持久引用，费静态内部类以及不必要的对象缓存；</li>
+</ol>
+</div><div class="tags"><a href="/tags/性能优化/">性能优化</a><a href="/tags/工具/">工具</a></div><div class="post-nav"><a href="/2016/05/10/Android-ui-optimize/" class="pre">UI优化</a><a href="/2016/05/09/Android-Performance-Outline/" class="next">性能优化总览</a></div></div></div></div><div class="pure-u-1-4 hidden_mid_and_down"><div id="sidebar"><div class="widget"><div class="widget-title"><i class="fa fa-folder-o"> 分类</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Android/">Android</a><span class="category-list-count">59</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Java/">Java</a><span class="category-list-count">7</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/ReactiveX/">ReactiveX</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/iOS/">iOS</a><span class="category-list-count">9</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/后端/">后端</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/工具/">工具</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/影视/">影视</a><span class="category-list-count">6</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/技术/">技术</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/电影/">电影</a><span class="category-list-count">2</span></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-star-o"> 标签</i></div><div class="tagcloud"><a href="/tags/Gitbook/" style="font-size: 15px;">Gitbook</a> <a href="/tags/Runtime/" style="font-size: 15px;">Runtime</a> <a href="/tags/视图/" style="font-size: 15px;">视图</a> <a href="/tags/Android/" style="font-size: 15px;">Android</a> <a href="/tags/权限/" style="font-size: 15px;">权限</a> <a href="/tags/代码优化/" style="font-size: 15px;">代码优化</a> <a href="/tags/Framework/" style="font-size: 15px;">Framework</a> <a href="/tags/性能优化/" style="font-size: 15px;">性能优化</a> <a href="/tags/工具/" style="font-size: 15px;">工具</a> <a href="/tags/合集/" style="font-size: 15px;">合集</a> <a href="/tags/ADB/" style="font-size: 15px;">ADB</a> <a href="/tags/源码/" style="font-size: 15px;">源码</a> <a href="/tags/反编译/" style="font-size: 15px;">反编译</a> <a href="/tags/iOS/" style="font-size: 15px;">iOS</a> <a href="/tags/Gradle/" style="font-size: 15px;">Gradle</a> <a href="/tags/Hexo/" style="font-size: 15px;">Hexo</a> <a href="/tags/基础/" style="font-size: 15px;">基础</a> <a href="/tags/效率/" style="font-size: 15px;">效率</a> <a href="/tags/MarkDown/" style="font-size: 15px;">MarkDown</a> <a href="/tags/电影/" style="font-size: 15px;">电影</a> <a href="/tags/Reactive/" style="font-size: 15px;">Reactive</a> <a href="/tags/AIDL/" style="font-size: 15px;">AIDL</a> <a href="/tags/Linux/" style="font-size: 15px;">Linux</a> <a href="/tags/驱动/" style="font-size: 15px;">驱动</a> <a href="/tags/Java/" style="font-size: 15px;">Java</a> <a href="/tags/日志/" style="font-size: 15px;">日志</a> <a href="/tags/事件/" style="font-size: 15px;">事件</a> <a href="/tags/代码设计/" style="font-size: 15px;">代码设计</a> <a href="/tags/网络/" style="font-size: 15px;">网络</a> <a href="/tags/测试/" style="font-size: 15px;">测试</a> <a href="/tags/Binder/" style="font-size: 15px;">Binder</a> <a href="/tags/Groovy/" style="font-size: 15px;">Groovy</a> <a href="/tags/Loader/" style="font-size: 15px;">Loader</a> <a href="/tags/RAC/" style="font-size: 15px;">RAC</a> <a href="/tags/事件处理/" style="font-size: 15px;">事件处理</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-file-o"> 最近文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2017/10/30/AIDL-原理分析/">AIDL 原理分析</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/30/App-启动过程/">App 启动过程</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/29/PMS-解析/">PMS 解析</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/29/WMS-解析/">WindowManagerService 解析</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/29/AMS-解析/">AMS 解析</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/09/10/The-Good-Wife/">The-Good-Wife</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/09/10/Black-Sails/">黑帆</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/06/29/hello-world/">Hello World</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/03/23/XCode-8-2-1-ClangFormat-插件安装/">XCode 8.2.1 ClangFormat 插件安装</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/03/07/SourceTree-分支图谱/">SourceTree 分支图谱</a></li></ul></div></div></div><div class="pure-u-1 pure-u-md-3-4"><div id="footer">Copyright © 2018 <a href="/." rel="nofollow">蜗牛壳.</a> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a><a rel="nofollow" target="_blank" href="https://github.com/tufu9441/maupassant-hexo"> Theme</a> by<a rel="nofollow" target="_blank" href="https://github.com/pagecho"> Cho.</a></div></div></div><a id="rocket" href="#top" class="show"></a><script type="text/javascript" src="/js/totop.js?v=1.0.0" async></script><script type="text/javascript" src="/js/codeblock-resizer.js?v=1.0.0"></script><script type="text/javascript" src="/js/smartresize.js?v=1.0.0"></script></div></body></html>

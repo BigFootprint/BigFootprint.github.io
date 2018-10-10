@@ -1,0 +1,92 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="李全民的个人博客"><title>TraceView | 蜗牛壳</title><link rel="stylesheet" type="text/css" href="/css/style.css?v=1.0.0"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/normalize/6.0.0/normalize.min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/0.6.2/pure-min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/0.6.2/grids-responsive-min.css"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.bootcss.com/jquery/3.2.1/jquery.min.js"></script><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"><script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+ga('create','UA-65882749-1','auto');ga('send','pageview');</script></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">TraceView</h1><a id="logo" href="/.">蜗牛壳</a><p class="description">计算机只有 0 和 1 ，但世界是连续的</p></div><div id="nav-menu"><a href="/." class="current"><i class="fa fa-home"> 首页</i></a><a href="/archives/"><i class="fa fa-archive"> 归档</i></a><a href="/about/"><i class="fa fa-user"> 关于</i></a></div></div><div id="layout" class="pure-g"><div class="pure-u-1 pure-u-md-3-4"><div class="content_container"><div class="post"><h1 class="post-title">TraceView</h1><div class="post-meta">May 9, 2016<span> | </span><span class="category"><a href="/categories/Android/">Android</a></span></div><div class="post-content"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p><a href="http://developer.android.com/intl/zh-cn/tools/debugging/debugging-tracing.html" target="_blank" rel="noopener">官网介绍</a></p>
+<h2 id="操作"><a href="#操作" class="headerlink" title="操作"></a>操作</h2><p><img src="http://7xktd8.com1.z0.glb.clouddn.com/TraceView.png" alt="TraceView操作页面"></p>
+<p>如图所示，我们可以按照以下步骤完成数据获取和展示：<a id="more"></a></p>
+<ol>
+<li>点击<code>A</code>处的Android小人Icon打开TraceView操作页面；</li>
+<li>在<code>C</code>处选择需要监控的进程，选择完毕后，<code>B</code>处的Icon就会亮起；</li>
+<li>准备好应用程序，点击<code>B</code>处的按钮，操作应用程序，再次点击<code>B</code>处的按钮，即可生成trace文件；</li>
+<li>Android Studio自动在操作页面的右边打开trace文件；</li>
+</ol>
+<p>执行完毕后就可以见到如图所示的界面。另外，能翻墙的童鞋可以查看<a href="http://developer.android.com/intl/zh-cn/tools/performance/traceview/index.html" target="_blank" rel="noopener">官网指导</a>。</p>
+<blockquote>
+<p>还有一种办法是通过插入Debug代码获取trace文件，详细可参考<a href="http://www.cnblogs.com/devinzhang/archive/2011/12/18/2291592.html" target="_blank" rel="noopener">Android调试工具之Traceview</a>。</p>
+<p>在问题没有确定，不知道具体出问题的代码在哪里时，使用这种方法定位比较繁琐。可以使用图形化操作方式大致确定函数（这种方式监控的函数很多，分析起来比较困难），然后再通过代码插入方式进一步分析。</p>
+</blockquote>
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>从上图打开的trace视图来看，主要分为两个部分：</p>
+<ol>
+<li>上半部分称为”Timeline Panel”：描述了每一个线程的每一个方法的启动和结束时间；</li>
+<li>下半部分称为”Profile Panel”：分析了每一个方法所做的事情以及耗费的时间；</li>
+</ol>
+<p><code>E</code>处列出了主线程这段时间执行的所有函数，点击最左边的箭头可以展开，看到该函数是被谁唤起调用的(Parents)，又调用了哪些子函数（Children）。</p>
+<p><code>F</code>处则展现了各个统计维度下的值。下面就详细来说说这块。</p>
+<h3 id="统计维度"><a href="#统计维度" class="headerlink" title="统计维度"></a>统计维度</h3><p>Profile Panel共展现了一个方法的以下统计数据:</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>解释</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Incl Cpu Time</td>
+<td>函数本身运行占用的CPU时间，包括子函数</td>
+</tr>
+<tr>
+<td>Excl Cpu Time</td>
+<td>函数运行占用的CPU时间，不包括子函数</td>
+</tr>
+<tr>
+<td>Incl Real Time</td>
+<td>函数本身运行的真实时间，包括子函数</td>
+</tr>
+<tr>
+<td>Excl Real Time</td>
+<td>函数运行的真实时间，不包括子函数</td>
+</tr>
+<tr>
+<td>Call+Recur Calls/Total</td>
+<td>函数被调用的总次数以及递归调用占总次数的百分比</td>
+</tr>
+<tr>
+<td>Cpu Time/Call</td>
+<td>函数平均每次调用所用的CPU时间</td>
+</tr>
+<tr>
+<td>Real Time/Call</td>
+<td>函数平均每次调用所用的真实时间</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>关于CPU时间和真实时间之间的区别，可以看StackOverFlow上的一个<a href="http://stackoverflow.com/questions/15760447/what-is-the-meaning-of-incl-cpu-time-excl-cpu-time-incl-real-cpu-time-excl-re" target="_blank" rel="noopener">帖子</a>: 真实时间其实包括了诸如I/O等待时间，线程上下文切换时间等待等。</p>
+<p>从数据看，这个推断是成立的，第一个论据就是所有函数的CPU时间都小于真实时间。另外一个证据，后面再说。</p>
+</blockquote>
+<h3 id="实战"><a href="#实战" class="headerlink" title="实战"></a>实战</h3><p>按照这个解释，我们来看一个🌰。我在主线程中调用了一个如下方法:</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testForPer</span><span class="params">()</span> </span>&#123;</span><br><span class="line">	<span class="keyword">try</span> &#123;</span><br><span class="line">		Thread.sleep(<span class="number">300</span>);</span><br><span class="line">		Toast.makeText(MainActivity.<span class="keyword">this</span>, <span class="string">"Done"</span>, Toast.LENGTH_SHORT).show();</span><br><span class="line">	&#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">		e.printStackTrace();</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>很明显，这个写法是有问题的。那么我们怎么找出它呢？根据真实时间和CPU时间的差别，很容易确定一点：这个方法虽然真实时间很长，达300ms+，但是CPU时间很短，因为有300ms处于睡眠状态。所以要捕捉这样一个方法，应该从真实时间出发。</p>
+<p>这个方法执行时间长，是因为调用了Thread的<code>sleep()</code>方法，这个方法300ms才返回，因此应当选择包含子函数的维度，否则该方法没有特殊的地方。</p>
+<p>符合以上判断的指标有: Incl Real Time、Real Time/Call。<br>在上图的<code>E</code>处选择到这两个维度，点击Header，使得其中一项是递减排列的。</p>
+<p><img src="http://7xktd8.com1.z0.glb.clouddn.com/TraceView分析.png" alt="TraceView分析"><br>如图很快就可以抓出这个函数。再看下面这个图，有全部维度的数据：</p>
+<p><img src="http://7xktd8.com1.z0.glb.clouddn.com/TraceView分析2.png" alt="TraceView分析"><br>可以看到Incl Real Time(303.390ms)比Incl CPU Time(2.285)大约就长了300ms，正是sleep的时间，佐证了前面关于真实时间和CPU时间的猜测。</p>
+<blockquote>
+<p>PS：这个例子中的真实时间和CPU时间的差距比较靠谱是因为此时CPU时间比较充裕，读者可以考虑一下如果当前有数十个线程会发生什么情况？</p>
+</blockquote>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>上面的实战是一个倒推的过程，也就是说我们先知道了问题的所在，再去捕捉它，但实际开发中我们无法得知问题所在，更不能做出如上的判断，那么该如何下手呢？</p>
+<p>实际上开发中常见的两类问题函数如下：</p>
+<ol>
+<li>调用次数非常频繁的函数——这类函数必须关注效率，并且防止过多的分配内存；</li>
+<li>执行时间很长的函数——比如我们的例子中展现的<code>testForPer()</code>；</li>
+</ol>
+<p>前者我们是可以通过Call + Recur Calls/Total维度去看，查找出调用次数非常多的函数，找出这些函数后，如果它们占用的CPU时间非常多（可以通过Incl CPU Time判断），则需要优化，另外内存这块可能需要手动check代码，或者通过别的工具检测。</p>
+<p>第二种情况稍微复杂一点，除了例子中展现的这类函数，的的确确是有另外一类函数，自身执行时间非常耗时，比如解析一个超长的文本文件就会导致函数本身耗时很久，这个时候就可以使用CPU时间来判断了。</p>
+<blockquote>
+<p>可以结合前面的问题进行思考。</p>
+</blockquote>
+<p>因为无法判断具体问题所在，所以可能需要从多个维度对函数进行排序，观察是否有函数出现“不正常”情况，并做出相应的处理。</p>
+<p>最后这里也有一篇文章写的比较清晰: <a href="http://bxbxbai.github.io/2014/10/25/use-trace-view/" target="_blank" rel="noopener">正确使用Android性能分析工具——TraceView</a>。</p>
+</div><div class="tags"><a href="/tags/性能优化/">性能优化</a><a href="/tags/工具/">工具</a></div><div class="post-nav"><a href="/2016/05/09/Android-Performance-Outline/" class="pre">性能优化总览</a><a href="/2016/05/03/Android-performance/" class="next">Android性能优化系列阅读笔记</a></div></div></div></div><div class="pure-u-1-4 hidden_mid_and_down"><div id="sidebar"><div class="widget"><div class="widget-title"><i class="fa fa-folder-o"> 分类</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Android/">Android</a><span class="category-list-count">59</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Java/">Java</a><span class="category-list-count">7</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/ReactiveX/">ReactiveX</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/iOS/">iOS</a><span class="category-list-count">9</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/后端/">后端</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/工具/">工具</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/影视/">影视</a><span class="category-list-count">6</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/技术/">技术</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/电影/">电影</a><span class="category-list-count">2</span></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-star-o"> 标签</i></div><div class="tagcloud"><a href="/tags/Gitbook/" style="font-size: 15px;">Gitbook</a> <a href="/tags/Runtime/" style="font-size: 15px;">Runtime</a> <a href="/tags/视图/" style="font-size: 15px;">视图</a> <a href="/tags/Android/" style="font-size: 15px;">Android</a> <a href="/tags/权限/" style="font-size: 15px;">权限</a> <a href="/tags/代码优化/" style="font-size: 15px;">代码优化</a> <a href="/tags/Framework/" style="font-size: 15px;">Framework</a> <a href="/tags/性能优化/" style="font-size: 15px;">性能优化</a> <a href="/tags/工具/" style="font-size: 15px;">工具</a> <a href="/tags/合集/" style="font-size: 15px;">合集</a> <a href="/tags/ADB/" style="font-size: 15px;">ADB</a> <a href="/tags/源码/" style="font-size: 15px;">源码</a> <a href="/tags/反编译/" style="font-size: 15px;">反编译</a> <a href="/tags/iOS/" style="font-size: 15px;">iOS</a> <a href="/tags/Gradle/" style="font-size: 15px;">Gradle</a> <a href="/tags/Hexo/" style="font-size: 15px;">Hexo</a> <a href="/tags/基础/" style="font-size: 15px;">基础</a> <a href="/tags/效率/" style="font-size: 15px;">效率</a> <a href="/tags/MarkDown/" style="font-size: 15px;">MarkDown</a> <a href="/tags/电影/" style="font-size: 15px;">电影</a> <a href="/tags/Reactive/" style="font-size: 15px;">Reactive</a> <a href="/tags/AIDL/" style="font-size: 15px;">AIDL</a> <a href="/tags/Linux/" style="font-size: 15px;">Linux</a> <a href="/tags/驱动/" style="font-size: 15px;">驱动</a> <a href="/tags/Java/" style="font-size: 15px;">Java</a> <a href="/tags/日志/" style="font-size: 15px;">日志</a> <a href="/tags/事件/" style="font-size: 15px;">事件</a> <a href="/tags/代码设计/" style="font-size: 15px;">代码设计</a> <a href="/tags/网络/" style="font-size: 15px;">网络</a> <a href="/tags/测试/" style="font-size: 15px;">测试</a> <a href="/tags/Binder/" style="font-size: 15px;">Binder</a> <a href="/tags/Groovy/" style="font-size: 15px;">Groovy</a> <a href="/tags/Loader/" style="font-size: 15px;">Loader</a> <a href="/tags/RAC/" style="font-size: 15px;">RAC</a> <a href="/tags/事件处理/" style="font-size: 15px;">事件处理</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-file-o"> 最近文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2017/10/30/AIDL-原理分析/">AIDL 原理分析</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/30/App-启动过程/">App 启动过程</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/29/PMS-解析/">PMS 解析</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/29/WMS-解析/">WindowManagerService 解析</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/29/AMS-解析/">AMS 解析</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/09/10/The-Good-Wife/">The-Good-Wife</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/09/10/Black-Sails/">黑帆</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/06/29/hello-world/">Hello World</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/03/23/XCode-8-2-1-ClangFormat-插件安装/">XCode 8.2.1 ClangFormat 插件安装</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/03/07/SourceTree-分支图谱/">SourceTree 分支图谱</a></li></ul></div></div></div><div class="pure-u-1 pure-u-md-3-4"><div id="footer">Copyright © 2018 <a href="/." rel="nofollow">蜗牛壳.</a> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a><a rel="nofollow" target="_blank" href="https://github.com/tufu9441/maupassant-hexo"> Theme</a> by<a rel="nofollow" target="_blank" href="https://github.com/pagecho"> Cho.</a></div></div></div><a id="rocket" href="#top" class="show"></a><script type="text/javascript" src="/js/totop.js?v=1.0.0" async></script><script type="text/javascript" src="/js/codeblock-resizer.js?v=1.0.0"></script><script type="text/javascript" src="/js/smartresize.js?v=1.0.0"></script></div></body></html>

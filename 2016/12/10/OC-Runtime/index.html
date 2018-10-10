@@ -1,0 +1,301 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="李全民的个人博客"><title>OC Runtime（一） | 蜗牛壳</title><link rel="stylesheet" type="text/css" href="/css/style.css?v=1.0.0"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/normalize/6.0.0/normalize.min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/0.6.2/pure-min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/0.6.2/grids-responsive-min.css"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.bootcss.com/jquery/3.2.1/jquery.min.js"></script><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"><script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+ga('create','UA-65882749-1','auto');ga('send','pageview');</script></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">OC Runtime（一）</h1><a id="logo" href="/.">蜗牛壳</a><p class="description">计算机只有 0 和 1 ，但世界是连续的</p></div><div id="nav-menu"><a href="/." class="current"><i class="fa fa-home"> 首页</i></a><a href="/archives/"><i class="fa fa-archive"> 归档</i></a><a href="/about/"><i class="fa fa-user"> 关于</i></a></div></div><div id="layout" class="pure-g"><div class="pure-u-1 pure-u-md-3-4"><div class="content_container"><div class="post"><h1 class="post-title">OC Runtime（一）</h1><div class="post-meta">Dec 10, 2016<span> | </span><span class="category"><a href="/categories/iOS/">iOS</a></span></div><div class="post-content"><blockquote>
+<p>参考资料：<a href="https://developer.apple.com/library/content/documentation/Cocoa/Conceptual/ObjCRuntimeGuide/Introduction/Introduction.html#//apple_ref/doc/uid/TP40008048-CH1-SW1" target="_blank" rel="noopener">《ObjC Runtime Guide》</a>。</p>
+</blockquote>
+<h2 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h2><h3 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h3><p>简单来说，<strong>Runtime 是 OC 语言的运行环境</strong>。</p>
+<p>OC 会尽量将决议延迟到运行时做出而非在编译和连接期间，比如方法调用具体是执行哪段代码。这意味着 OC 不仅需要一个特定的编译器，而且需要一个运行系统来执行编译后的代码从而实现决议延迟，这有点像 JVM 和 Java的关系。因此研究 Runtime 有助于了解 OC 的运行，帮助认识 OC 的本质。</p>
+<p>Runtime 分为两个版本，“modern”和“legacy”。modern 版本从 OC2.0 开始引入，在<a href="https://developer.apple.com/reference/objectivec/1657527-objective_c_runtime" target="_blank" rel="noopener">Objective-C Runtime Reference</a>中有详细的开发接口描述。modern 版本相比于 legacy 版本的最大亮点在于：在 legacy 版本的 Runtime 中，如果你改变了实例变量的布局，就必须重新编译所有的子类，在 modern 版本的 Runtime 中则不需要。另外， modern 版本 Runtime 支持从声明的 property 综合推理（synthesis）出实例变量。</p>
+<p>iPhone 应用和 OS X v10.5以及之后版本的 64-bit 程序使用的是 modern 版本，其余的应用使用的是 legacy 版本。<a id="more"></a></p>
+<blockquote>
+<p>legacy 版本开发接口在 Objective-C 1 Runtime Reference 中有描述，但基本不需要去关心了。</p>
+</blockquote>
+<h3 id="调用-Runtime-的方式"><a href="#调用-Runtime-的方式" class="headerlink" title="调用 Runtime 的方式"></a>调用 Runtime 的方式</h3><p>OC 语言和 Runtime 有三种层次的交互：</p>
+<ul>
+<li><strong>通过 OC 源码交互。</strong> 这种交互并不是说通过 OC 方法去调用 runtime ，而是指编译器会通过创建合适的数据结构和方法调用来实现语言的动态特征，比如用于描述类、Category、协议以及 selector。最主要的一个 runtime 函数就是用于发送消息的，后面会有描述，它就是通过 OC 层面的消息发送表达式来调用的。</li>
+<li><strong>使用 Foundation 中定义的 NSObject 类交互。 </strong> Cocoa 中大部分的对象都是 NSObject 的子类，所以它们也继承了 NSobject 的方法，其中有部分方法是用于内省的，比如<code>class</code>方法——用于询问一个对象它的类是什么；用于判断继承关系的方法<code>isKindOfClass:</code>和<code>isMemberOfClass:</code>；判断一个对象是否能接受某个消息的方法<code>respondsToSelector:</code>；判断一个对象是否实现了某个协议的方法<code>conformsToProtocol:</code>；查询方法实现地址的方法<code>methodForSelector:</code>。这些方法赋予了对象内省的能力。</li>
+<li><strong>直接调用 runtime 函数。</strong> Runtime 系统是一个动态链接库，由一组函数和数据结构组成的，它位于系统的 /usr/include/objc 目录下面。这里的很多函数允许开发者在开发应用的时候使用纯 C 语言来复制编译器的行为。其中一些就是前面提到的 NSObject 内省函数的基础。所有的这些函数都可以在文档 <a href="https://developer.apple.com/reference/objectivec/1657527-objective_c_runtime" target="_blank" rel="noopener">Objective-C Runtime Reference</a> 中查阅。</li>
+</ul>
+<h3 id="Runtime的内容"><a href="#Runtime的内容" class="headerlink" title="Runtime的内容"></a>Runtime的内容</h3><p>Runtime总共包含三个方面的内容：</p>
+<ul>
+<li>类的动态加载</li>
+<li>消息发送</li>
+<li>属性内省</li>
+</ul>
+<p>下面一一阐述。</p>
+<h2 id="类的动态加载"><a href="#类的动态加载" class="headerlink" title="类的动态加载"></a>类的动态加载</h2><p>OC 可以在运行时加载和链接新的类和 Category，加载完成后和程序中原始的类以及 Category 并无二致。我们有两种方式可以进行类动态加载：</p>
+<ol>
+<li>objc/objc-load.h 文件中定义的 runtime 函数；</li>
+<li>Cocoa 的 NSBundle 类；</li>
+</ol>
+<p>具体操作因为文档没有描述，本文也不打算拓展，计划后面补充。</p>
+<h2 id="消息发送"><a href="#消息发送" class="headerlink" title="消息发送"></a>消息发送</h2><p>在 OC 代码中我们通过<code>[]</code>来表达一个消息的发送，比如<code>[self class]</code>，这个调用最终会被转化为<code>objc_msgSend</code>函数调用。</p>
+<h3 id="objc-msgSend函数"><a href="#objc-msgSend函数" class="headerlink" title="objc_msgSend函数"></a><code>objc_msgSend</code>函数</h3><p><code>objc_msgSend</code>函数的转换如下：如果 OC 中的调用是<code>[receiver message]</code>，那么会被转化为<code>objc_msgSend(receiver, selector)</code>，其中 selector 代表的就是 message，如果有参数，就会转化为<code>objc_msgSend(receiver, selector, arg1, arg2, ...)</code>调用样式，通过这个函数就可以实现动态绑定：</p>
+<ol>
+<li>它首先会找到 selector 指向的方法实现。由于不同的类可能会实现同样的方法（指的是方法名字一样），因此这个寻找过程是依赖于 receiver 的，简单来说，就是找到 receiver 上的这个方法的实现；</li>
+<li>之后调用这个方法实现，将对象实例以及参数传递给方法（传递对象实例是为了引用对象的实例变量）；</li>
+<li>最终它会返回方法返回的值；</li>
+</ol>
+<blockquote>
+<p>苹果建议永远不要自己去调用这个函数。</p>
+</blockquote>
+<p>发送消息的关键在于编译器为每一个类和对象创建的数据结构。每一个类都包含两个关键的元素：</p>
+<ul>
+<li>指向父类的指针；</li>
+<li>类分发表。这张表定义了 selector 到类定义方法的映射。</li>
+</ul>
+<p>每一个对象实例创建之后，都会携带有一个指向类结构的指针变量——<code>isa</code>。这个指针可以让对象知道自己的类型以及自己的所有父类。</p>
+<div align="center"><img src="http://7xktd8.com1.z0.glb.clouddn.com/消息发送框架.png" width="280" alt="消息发送框架"></div>
+
+<p>如图，当一个对象接收到一个消息时，<code>objc_msgSend</code>函数会根据对象的<code>isa</code>指针找到类结构体，从而找到类的分发表，查询是否有 selector 对应的方法体，如果没有，则根据 superclass 找到父类的分发表，周而复始直到找到对应的方法体。<strong>这就是运行时动态绑定方法的流程</strong>。</p>
+<blockquote>
+<p>找不到的处理后面会提到。</p>
+</blockquote>
+<p>这种实现的缺点很明显：如果每次都去一层层找，肯定比直接进行方法调用要慢很多，这种差别就像在链表和数组中定位一个元素一样，一个通过下标定位，一个通过遍历定位，差距不言而喻。因此在每个类中会有额外的缓存结构来存储这个类经常使用到的方法——包括自身和父类的方法。对象每次收到一个消息的时候都会首先搜寻缓存结构，搜寻不到才会去搜寻分发表。通过这种方式，可以缩小消息发送和方法调用之间的速度差距。后面还会提到别的手段用于缩小这种差距。</p>
+<blockquote>
+<p>缓存基于局部性原理。</p>
+</blockquote>
+<h3 id="隐藏的参数"><a href="#隐藏的参数" class="headerlink" title="隐藏的参数"></a>隐藏的参数</h3><p>当使用<code>objc_msgSend</code>函数传递消息的时候，它不仅会传递原来消息的所有参数，还会默认传递两个额外的参数：</p>
+<ol>
+<li>接受对象 receiver；</li>
+<li>表示方法的 selector；</li>
+</ol>
+<p>这两个参数在编译器编译时被“偷偷”插入，从而使得<code>objc_msgSend</code>可以还原出完整的消息发送信息：</p>
+<ol>
+<li>消息是什么（selector）；</li>
+<li>消息是发送给谁的（receiver）；</li>
+<li>参数是什么；</li>
+</ol>
+<p>虽然参数是隐形的，但是在代码里面却可以使用它们，它们分别是<code>self</code>和<code>_cmd</code>。比如下面的例子：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">- (void)strange &#123;</span><br><span class="line">    id  target = getTheReceiver();</span><br><span class="line">    SEL method = getTheMethod();</span><br><span class="line">    if ( target == self || method == _cmd )</span><br><span class="line">        return nil;</span><br><span class="line">    return [target performSelector:method];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>其中 self 就代表消息 strange 所在的对象，_cmd 就表示代表 strange 的 selector。<strong>self 就是方法为什么可以操作对象实例变量的关键所在：通过self，可以引用到对象本身，从而可以引用对象的变量</strong>。</p>
+<h3 id="获取方法地址"><a href="#获取方法地址" class="headerlink" title="获取方法地址"></a>获取方法地址</h3><p>动态绑定处理消息方法的过程比较耗时，除了可以使用缓存加快查询速度，还可以通过获取方法地址直接调用方法的方式来避免动态绑定。这种方法并不常见，除非你在短时间内需要高频次的调用某个方法，并且直接调用已经造成性能问题。</p>
+<p>NSObject 中有一个方法是用于获取方法地址的：<code>methodForSelector</code>，通过这个方法可以获得一个函数指针，用法如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">void (*setter)(id, SEL, BOOL);</span><br><span class="line">int i;</span><br><span class="line">setter = (void (*)(id, SEL, BOOL))[target</span><br><span class="line">    methodForSelector:@selector(setFilled:)];</span><br><span class="line">for ( i = 0 ; i &lt; 1000 ; i++ )</span><br><span class="line">    setter(targetList[i], @selector(setFilled:), YES);</span><br></pre></td></tr></table></figure>
+<p>声明的函数指针中也标记除了隐形参数，在调用的时候需要把对应的值设置进去。</p>
+<h3 id="方法动态解析"><a href="#方法动态解析" class="headerlink" title="方法动态解析"></a>方法动态解析</h3><p>OC 除了可以通过 <code>objc_msgSend</code>函数动态绑定已有的方法，还可以通过实现方法<code>resolveInstanceMethod:</code>和<code>resolveInstanceMethod:</code>动态提供类方法和实例方法实现。<strong>OC 方法本质上来说就是至少接受 self 和 _cmd 两个参数的 C 函数</strong>。通过调用方法<code>class_addMethod</code>可以为类添加一个函数，举例如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">void dynamicMethodIMP(id self, SEL _cmd) &#123;</span><br><span class="line">    // implementation ....</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">@implementation MyClass</span><br><span class="line">+ (BOOL)resolveInstanceMethod:(SEL)aSEL &#123;</span><br><span class="line">	if (aSEL == @selector(resolveThisMethodDynamically)) &#123;</span><br><span class="line">		class_addMethod([self class], aSEL, (IMP) dynamicMethodIMP, &quot;v@:&quot;);</span><br><span class="line">		return YES;</span><br><span class="line">	&#125;</span><br><span class="line">	return [super resolveInstanceMethod:aSEL];</span><br><span class="line">&#125;</span><br><span class="line">@end</span><br></pre></td></tr></table></figure>
+<p>消息转发（后面会提）和方法动态解析绝大部分情况下是正交的，方法动态解析会在消息转发之前进行。如果<code>respondsToSelector:</code>或者<code>instancesRespondToSelector:</code>被调用，方法动态解析是有机会为 selector 提供一个 IMP（可以认为是函数指针）的。但如果想在动态解析之后进行消息转发，这里可以返回 NO。</p>
+<h3 id="消息转发"><a href="#消息转发" class="headerlink" title="消息转发"></a>消息转发</h3><p>前面提到，<code>objc_msgSend</code>函数会在分发表中寻找 selector 对应的方法体，如果找到 NSObject 还是找不到怎么办呢？一种情况就是动态方法解析，如果返回 YES，就表示对于的方法体已经添加到了类中，NO 则相反。那么如果是返回是 NO，那是不是程序就出错，直接 crash 了呢？OC 在这个时候还提供了最后一道关卡：在报错之前，runtime 会向消息的原本发送对象发送一个<code>forwardInvocation:</code>消息，并携带一个 NSInvocation 参数，这个参数包装了原始的消息和参数。我们可以在这个地方对一个消息进行最后的处理。</p>
+<p>首先顾名思义，这个方法一般用于将消息转发给别的对象。通过实现这个方法，我们可以给消息一个默认的响应，或者通过别的手段来防止出错。如果我们不去重载这个方法，那么就会执行 NSObject 的默认实现，即调用<code>doesNotRecognizeSelector:</code>方法，从而报错。举例如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">- (void)forwardInvocation:(NSInvocation *)anInvocation</span><br><span class="line">&#123;</span><br><span class="line">    if ([someOtherObject respondsToSelector:[anInvocation selector]])</span><br><span class="line">        [anInvocation invokeWithTarget:someOtherObject];</span><br><span class="line">    else</span><br><span class="line">    	[super forwardInvocation:anInvocation];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这方法可以扮演不能识别的消息的转发中心，或者作为一个中转站，将所有的消息转发到一个特定的对象；也可以将一个消息转换为别的消息，甚至直接吞没一些消息，以避免错误发生。简而言之，未被识别的消息以及未能动态解析的消息都会被转到这里进行处理，因此这里可以有很多玩法，比如多继承模拟，比如实现代理。</p>
+<blockquote>
+<p>注意：想要这个方法被调用，还需要重载另外一个方法<code>methodSignatureForSelector:</code>，详细见下面例子。</p>
+</blockquote>
+<p>除了<code>forwardInvocation</code>这个方法之外，还有一个方法也可以扮演这个角色——<code>forwardingTargetForSelector:</code>。这个方法通过返回一个消息的接收者来完成对消息的转发，后面示例会给出用法。</p>
+<h4 id="消息转发模拟多继承"><a href="#消息转发模拟多继承" class="headerlink" title="消息转发模拟多继承"></a>消息转发模拟多继承</h4><p>消息转发是可以模拟出多继承的。如下图：</p>
+<div align="center"><img src="http://7xktd8.com1.z0.glb.clouddn.com/消息转发.png" width="320" alt="消息转发"></div>
+
+<p>Warrior 通过把 negotiate 方法转发给 Diplomat，看上去就像是继承了 Diplomat，另外一方面 Warrior 本身就继承了 NSObject，从而就具备了两条继承线。</p>
+<blockquote>
+<p>这种多继承的“模拟”其实就是组合的一个变种，只不过实现起来更加方便。</p>
+</blockquote>
+<p>实际上要完全模拟多继承并没有这么简单，我们需要修改很多默认的内省函数来进一步完善这种模拟，比如:</p>
+<ul>
+<li><code>respondsToSelector:</code></li>
+<li><code>isKindOfClass:</code></li>
+<li><code>nstancesRespondToSelector:</code></li>
+<li><code>methodSignatureForSelector:</code></li>
+<li><code>methodSignatureForSelector:</code></li>
+</ul>
+<p>举个例子：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">- (BOOL)respondsToSelector:(SEL)aSelector</span><br><span class="line">&#123;</span><br><span class="line">    if ( [super respondsToSelector:aSelector] )</span><br><span class="line">        return YES;</span><br><span class="line">    else &#123;</span><br><span class="line">        /* Here, test whether the aSelector message can     *</span><br><span class="line">         * be forwarded to another object and whether that  *</span><br><span class="line">         * object can respond to it. Return YES if it can.  */</span><br><span class="line">    &#125;</span><br><span class="line">	return NO; </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h3><p>前面描述了消息处理的过程，总共包括三种方式：</p>
+<ol>
+<li>分发表；</li>
+<li>动态解析；</li>
+<li>消息转发；</li>
+</ol>
+<p>下面给一个例子实践一下，为了节省篇幅和方便阅读，h 和 m 就写在一个代码块里面了。首先声明 MsgTest 类：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br></pre></td><td class="code"><pre><span class="line">@interface MsgTest : NSObject</span><br><span class="line">-(void)realMethod;</span><br><span class="line">@end</span><br><span class="line">  </span><br><span class="line">void dynamicMethodIMP(id self, SEL _cmd) &#123;</span><br><span class="line">    NSLog(@&quot;%@&quot;, @&quot;Dynamic Resolving.&quot;);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">@interface MsgTest ()</span><br><span class="line">@property(nonatomic, strong) MsgResovler *msgResolver;</span><br><span class="line">@end</span><br><span class="line"></span><br><span class="line">@implementation MsgTest</span><br><span class="line">@synthesize msgResolver;</span><br><span class="line"></span><br><span class="line">-(instancetype)init&#123;</span><br><span class="line">    if(self = [super init])&#123;</span><br><span class="line">        msgResolver = [[MsgResovler alloc] init];</span><br><span class="line">    &#125;</span><br><span class="line">    return self;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">-(void)realMethod&#123;</span><br><span class="line">    NSLog(@&quot;%@&quot;, @&quot;Real Method&quot;);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">+ (BOOL)resolveInstanceMethod:(SEL)aSEL &#123;</span><br><span class="line">    if (aSEL == @selector(resolveThisMethodDynamically)) &#123;</span><br><span class="line">        class_addMethod([self class], aSEL, (IMP) dynamicMethodIMP, &quot;v@:&quot;);</span><br><span class="line">        return YES;</span><br><span class="line">    &#125;</span><br><span class="line">    return [super resolveInstanceMethod:aSEL];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (id)forwardingTargetForSelector:(SEL)aSelector &#123;</span><br><span class="line">    if (aSelector == @selector(forwardTarget)) &#123;</span><br><span class="line">        return msgResolver; // 返回实际处理对象</span><br><span class="line">    &#125;</span><br><span class="line">    return nil;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (void)forwardInvocation:(NSInvocation *)anInvocation</span><br><span class="line">&#123;</span><br><span class="line">    if ([msgResolver respondsToSelector:[anInvocation selector]])</span><br><span class="line">        [anInvocation invokeWithTarget:msgResolver];</span><br><span class="line">    else</span><br><span class="line">        [super forwardInvocation:anInvocation];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">// 消息转发的时候，不要忘了实现这个方法</span><br><span class="line">- (NSMethodSignature*)methodSignatureForSelector:(SEL)selector</span><br><span class="line">&#123;</span><br><span class="line">    NSMethodSignature* signature = [super methodSignatureForSelector:selector];</span><br><span class="line">    if (!signature) &#123;</span><br><span class="line">        signature = [msgResolver methodSignatureForSelector:selector];</span><br><span class="line">    &#125;</span><br><span class="line">    return signature;</span><br><span class="line">&#125;</span><br><span class="line">@end</span><br></pre></td></tr></table></figure>
+<p>这是核心类，会根据前面提到的消息处理方式分别接受四种消息，接着为消息转发声明消息接受类 MsgResovler：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">@interface MsgResovler : NSObject</span><br><span class="line">-(void)forwardMsg;</span><br><span class="line">-(void)forwardTarget;</span><br><span class="line">@end</span><br><span class="line">  </span><br><span class="line">@implementation MsgResovler</span><br><span class="line">-(void)forwardMsg &#123;</span><br><span class="line">    NSLog(@&quot;%@&quot;, @&quot;Forwarded Msg&quot;);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">-(void)forwardTarget&#123;</span><br><span class="line">    NSLog(@&quot;%@&quot;, @&quot;Forwarding Target&quot;);</span><br><span class="line">&#125;</span><br><span class="line">@end</span><br></pre></td></tr></table></figure>
+<p>最后尝试调用：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">int main(int argc, const char * argv[]) &#123;</span><br><span class="line">    @autoreleasepool &#123;</span><br><span class="line">        MsgTest *msgTest = [[MsgTest alloc] init];</span><br><span class="line">        NSLog(@&quot;%@&quot;, @&quot;============= 真实方法 =============&quot;);</span><br><span class="line">        [msgTest realMethod];</span><br><span class="line">        NSLog(@&quot;%@&quot;, @&quot;============= 动态解析 =============&quot;);</span><br><span class="line">        [msgTest performSelector:@selector(resolveThisMethodDynamically)];</span><br><span class="line">        NSLog(@&quot;%@&quot;, @&quot;============= 消息转发 =============&quot;);</span><br><span class="line">        [msgTest performSelector:@selector(forwardMsg)];</span><br><span class="line">      	NSLog(@&quot;%@&quot;, @&quot;============= 消息转发 =============&quot;);</span><br><span class="line">        [msgTest performSelector:@selector(forwardTarget)];</span><br><span class="line">    &#125;</span><br><span class="line">    return 0;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>就可以看到控制台输出：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">============= 真实方法 =============</span><br><span class="line">Real Method</span><br><span class="line">============= 动态解析 =============</span><br><span class="line">Dynamic Resolving.</span><br><span class="line">============= 消息转发 =============</span><br><span class="line">Forwarded Msg</span><br><span class="line">============= 消息转发 =============</span><br><span class="line">Forwarding Target</span><br><span class="line">Program ended with exit code: 0</span><br></pre></td></tr></table></figure>
+<p>四个方法都顺利完成调用，没有报错。那么这几种方法的调用顺序是什么样子的呢？借用网上一幅图：</p>
+<div align="center"><img src="http://7xktd8.com1.z0.glb.clouddn.com/消息发送路线.png" width="360" alt="消息转发路线"></div>
+
+<p>一目了然。</p>
+<h2 id="属性内省"><a href="#属性内省" class="headerlink" title="属性内省"></a>属性内省</h2><h3 id="Type-Encoding"><a href="#Type-Encoding" class="headerlink" title="Type Encoding"></a>Type Encoding</h3><p>在说属性内省之前，需要先说一个概念——Type Encoding。Type Encoding 实际是用于表达方法返回值和参数的简洁表达式，开发者可以通过<code>@encode()</code>编译命令对某一个特定类型进行转化，比如：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">char *buf1 = @encode(int **);//^^i</span><br><span class="line">char *buf2 = @encode(struct key);//要看key内容</span><br><span class="line">char *buf3 = @encode(Rectangle);//要看Rectangle类</span><br></pre></td></tr></table></figure>
+<p>具体对应列表如下：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">Code</th>
+<th style="text-align:center">Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">c</td>
+<td style="text-align:center">A char</td>
+</tr>
+<tr>
+<td style="text-align:center">i</td>
+<td style="text-align:center">An int</td>
+</tr>
+<tr>
+<td style="text-align:center">s</td>
+<td style="text-align:center">A short</td>
+</tr>
+<tr>
+<td style="text-align:center">l</td>
+<td style="text-align:center">A long</td>
+</tr>
+<tr>
+<td style="text-align:center">q</td>
+<td style="text-align:center">A long long</td>
+</tr>
+<tr>
+<td style="text-align:center">C</td>
+<td style="text-align:center">An unsigned char</td>
+</tr>
+<tr>
+<td style="text-align:center">I</td>
+<td style="text-align:center">An unsigned int</td>
+</tr>
+<tr>
+<td style="text-align:center">S</td>
+<td style="text-align:center">An unsigned short</td>
+</tr>
+<tr>
+<td style="text-align:center">L</td>
+<td style="text-align:center">An unsigned long</td>
+</tr>
+<tr>
+<td style="text-align:center">Q</td>
+<td style="text-align:center">An unsigned long long</td>
+</tr>
+<tr>
+<td style="text-align:center">f</td>
+<td style="text-align:center">A float</td>
+</tr>
+<tr>
+<td style="text-align:center">d</td>
+<td style="text-align:center">A double</td>
+</tr>
+<tr>
+<td style="text-align:center">B</td>
+<td style="text-align:center">A C++ bool or C99_Bool</td>
+</tr>
+<tr>
+<td style="text-align:center">v</td>
+<td style="text-align:center">A void</td>
+</tr>
+<tr>
+<td style="text-align:center">*</td>
+<td style="text-align:center">A character string(char *)</td>
+</tr>
+<tr>
+<td style="text-align:center">@</td>
+<td style="text-align:center">An object(whether statically typed or typed id)</td>
+</tr>
+<tr>
+<td style="text-align:center">#</td>
+<td style="text-align:center">A class object(Class)</td>
+</tr>
+<tr>
+<td style="text-align:center">:</td>
+<td style="text-align:center">A method selector(SEL)</td>
+</tr>
+<tr>
+<td style="text-align:center">[array type]</td>
+<td style="text-align:center">An array</td>
+</tr>
+<tr>
+<td style="text-align:center">{name=type…}</td>
+<td style="text-align:center">A structure</td>
+</tr>
+<tr>
+<td style="text-align:center">(name=type…)</td>
+<td style="text-align:center">A union</td>
+</tr>
+<tr>
+<td style="text-align:center">bnum</td>
+<td style="text-align:center">A bit bield of num bits</td>
+</tr>
+<tr>
+<td style="text-align:center">^type</td>
+<td style="text-align:center">A pointer</td>
+</tr>
+<tr>
+<td style="text-align:center">?</td>
+<td style="text-align:center">An unknown type(among other things, this code is used for function pointers)</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>注意：OC 不支持 long double 类型，@encode(long double) 会返回 d，也就是会被当做 double 执行。</p>
+</blockquote>
+<p>下面是一些例子：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">例子</th>
+<th style="text-align:center">解释</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">[12^f]</td>
+<td style="text-align:center">一个包含12个指向 float 元素的指针的数组</td>
+</tr>
+<tr>
+<td style="text-align:center">{example=@*i}</td>
+<td style="text-align:center">一个包含对象、char指针和int值的结构体，名为example</td>
+</tr>
+<tr>
+<td style="text-align:center">^{example=@*i}</td>
+<td style="text-align:center">上述结构体的指针</td>
+</tr>
+<tr>
+<td style="text-align:center">^^{example}</td>
+<td style="text-align:center">上述指针的指针，这时候可以忽略结构体内容</td>
+</tr>
+<tr>
+<td style="text-align:center">{NSObject=# }</td>
+<td style="text-align:center">对象会被当做结构体对待，@encode(NSObject)就会产生左边的表达式，NSObject 的对象实例只有一个 Class 类型的 isa 指针。</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>关于@encode{NSObject}，输出的其实是NSObject这个类它的实例的表达式：包含一个 isa 指针以及属性。</p>
+</blockquote>
+<h3 id="Property-类型和函数"><a href="#Property-类型和函数" class="headerlink" title="Property 类型和函数"></a>Property 类型和函数</h3><p>当编译器在编译 property 的时候，它会产生一些与类、Category以及协议相关的描述元数据。OC 提供了一些函数可以通过名字搜索类或者协议上的 property，从而获取这些元数据。</p>
+<p>Property 实际是一个 objc_property 指针：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">typedef struct objc_property *Property;</span><br></pre></td></tr></table></figure>
+<p>开发者可以通过<code>class_copyPropertyList</code>和<code>protocol_copyPropertyList</code>两个函数来获取类/协议的属性数组：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">objc_property_t *class_copyPropertyList(Class cls, unsigned int *outCount)</span><br><span class="line">objc_property_t *protocol_copyPropertyList(Protocol *proto, unsigned int *outCount)</span><br></pre></td></tr></table></figure>
+<p>举个例子，声明如下一个类：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">@interface Lender : NSObject &#123;</span><br><span class="line">    float ins;</span><br><span class="line">&#125;</span><br><span class="line">@property float alone;</span><br><span class="line">@end</span><br></pre></td></tr></table></figure>
+<p>通过如下方法可以获取属性列表：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">id LenderClass = objc_getClass(&quot;Lender&quot;);</span><br><span class="line">unsigned int outCount;</span><br><span class="line">objc_property_t *properties = class_copyPropertyList(LenderClass, &amp;outCount);</span><br></pre></td></tr></table></figure>
+<p>获取属性之后，可以根据<code>property_getName</code>来获取属性名：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">const char *property_getName(objc_property_t property)</span><br></pre></td></tr></table></figure>
+<p>通过指定某个类的某个属性名字，也可以获取到一个属性：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">objc_property_t class_getProperty(Class cls, const char *name)</span><br><span class="line">objc_property_t protocol_getProperty(Protocol *proto, const char *name, BOOL</span><br><span class="line">isRequiredProperty, BOOL isInstanceProperty)</span><br></pre></td></tr></table></figure>
+<p>接着调用<code>property_getAttributes</code>函数可以获取属性的名字以及 @encode 类型字符串。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">const char *property_getAttributes(objc_property_t property)</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>@encode 类型字符串 可以参见<a href="https://developer.apple.com/library/content/documentation/Cocoa/Conceptual/ObjCRuntimeGuide/Articles/ocrtPropertyIntrospection.html#//apple_ref/doc/uid/TP40008048-CH101-SW1" target="_blank" rel="noopener">Property Type String</a>和<a href="https://developer.apple.com/library/content/documentation/Cocoa/Conceptual/ObjCRuntimeGuide/Articles/ocrtPropertyIntrospection.html#//apple_ref/doc/uid/TP40008048-CH101-SW1" target="_blank" rel="noopener">Property Attribute Description Examples</a>。</p>
+</blockquote>
+<p>把这些代码融合在一块儿，就可以获得一个类/协议的所有属性：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">id LenderClass = objc_getClass(&quot;Lender&quot;);</span><br><span class="line">unsigned int outCount, i;</span><br><span class="line">objc_property_t *properties = class_copyPropertyList(LenderClass, &amp;outCount);</span><br><span class="line">for (i = 0; i &lt; outCount; i++) &#123;</span><br><span class="line">	objc_property_t property = properties[i];</span><br><span class="line">	fprintf(stdout, &quot;%s %s\n&quot;, property_getName(property), property_getAttributes(property));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>输出结果如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">alone Tf,V_alone</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>实践结果表明：Category 中的属性会被一并打印，而实例变量不会被打印。</p>
+</blockquote>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p><a href="https://developer.apple.com/library/content/documentation/Cocoa/Conceptual/ObjCRuntimeGuide/Introduction/Introduction.html#//apple_ref/doc/uid/TP40008048-CH1-SW1" target="_blank" rel="noopener">《ObjC Runtime Guide》</a>是学习 Runtime 的入门读物，本文是该文档的阅读笔记，主要目的是搞清楚两件事情：</p>
+<ol>
+<li>什么是 Runtime；</li>
+<li>Runtime 能做什么；</li>
+</ol>
+<p>除此之外没有任何的探究拓展。在此基础上，后续会探索 Runtime 是如何实现的，也就是本文提到的函数和数据结构，进而发现 Runtime 更为本质的内在和更为强大的用法。</p>
+</div><div class="tags"><a href="/tags/Runtime/">Runtime</a></div><div class="post-nav"><a href="/2016/12/10/OC-Runtime（二）/" class="pre">OC Runtime（二）</a><a href="/2016/12/08/Android卡顿监控方案以及局限性/" class="next">Android卡顿监控方案以及局限性</a></div></div></div></div><div class="pure-u-1-4 hidden_mid_and_down"><div id="sidebar"><div class="widget"><div class="widget-title"><i class="fa fa-folder-o"> 分类</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Android/">Android</a><span class="category-list-count">59</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Java/">Java</a><span class="category-list-count">7</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/ReactiveX/">ReactiveX</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/iOS/">iOS</a><span class="category-list-count">9</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/后端/">后端</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/工具/">工具</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/影视/">影视</a><span class="category-list-count">6</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/技术/">技术</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/电影/">电影</a><span class="category-list-count">2</span></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-star-o"> 标签</i></div><div class="tagcloud"><a href="/tags/Gitbook/" style="font-size: 15px;">Gitbook</a> <a href="/tags/Runtime/" style="font-size: 15px;">Runtime</a> <a href="/tags/视图/" style="font-size: 15px;">视图</a> <a href="/tags/Android/" style="font-size: 15px;">Android</a> <a href="/tags/权限/" style="font-size: 15px;">权限</a> <a href="/tags/代码优化/" style="font-size: 15px;">代码优化</a> <a href="/tags/Framework/" style="font-size: 15px;">Framework</a> <a href="/tags/性能优化/" style="font-size: 15px;">性能优化</a> <a href="/tags/工具/" style="font-size: 15px;">工具</a> <a href="/tags/合集/" style="font-size: 15px;">合集</a> <a href="/tags/ADB/" style="font-size: 15px;">ADB</a> <a href="/tags/源码/" style="font-size: 15px;">源码</a> <a href="/tags/反编译/" style="font-size: 15px;">反编译</a> <a href="/tags/iOS/" style="font-size: 15px;">iOS</a> <a href="/tags/Gradle/" style="font-size: 15px;">Gradle</a> <a href="/tags/Hexo/" style="font-size: 15px;">Hexo</a> <a href="/tags/基础/" style="font-size: 15px;">基础</a> <a href="/tags/效率/" style="font-size: 15px;">效率</a> <a href="/tags/MarkDown/" style="font-size: 15px;">MarkDown</a> <a href="/tags/电影/" style="font-size: 15px;">电影</a> <a href="/tags/Reactive/" style="font-size: 15px;">Reactive</a> <a href="/tags/AIDL/" style="font-size: 15px;">AIDL</a> <a href="/tags/Linux/" style="font-size: 15px;">Linux</a> <a href="/tags/驱动/" style="font-size: 15px;">驱动</a> <a href="/tags/Java/" style="font-size: 15px;">Java</a> <a href="/tags/日志/" style="font-size: 15px;">日志</a> <a href="/tags/事件/" style="font-size: 15px;">事件</a> <a href="/tags/代码设计/" style="font-size: 15px;">代码设计</a> <a href="/tags/网络/" style="font-size: 15px;">网络</a> <a href="/tags/测试/" style="font-size: 15px;">测试</a> <a href="/tags/Binder/" style="font-size: 15px;">Binder</a> <a href="/tags/Groovy/" style="font-size: 15px;">Groovy</a> <a href="/tags/Loader/" style="font-size: 15px;">Loader</a> <a href="/tags/RAC/" style="font-size: 15px;">RAC</a> <a href="/tags/事件处理/" style="font-size: 15px;">事件处理</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-file-o"> 最近文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2017/10/30/AIDL-原理分析/">AIDL 原理分析</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/30/App-启动过程/">App 启动过程</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/29/PMS-解析/">PMS 解析</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/29/WMS-解析/">WindowManagerService 解析</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/29/AMS-解析/">AMS 解析</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/09/10/The-Good-Wife/">The-Good-Wife</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/09/10/Black-Sails/">黑帆</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/06/29/hello-world/">Hello World</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/03/23/XCode-8-2-1-ClangFormat-插件安装/">XCode 8.2.1 ClangFormat 插件安装</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/03/07/SourceTree-分支图谱/">SourceTree 分支图谱</a></li></ul></div></div></div><div class="pure-u-1 pure-u-md-3-4"><div id="footer">Copyright © 2018 <a href="/." rel="nofollow">蜗牛壳.</a> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a><a rel="nofollow" target="_blank" href="https://github.com/tufu9441/maupassant-hexo"> Theme</a> by<a rel="nofollow" target="_blank" href="https://github.com/pagecho"> Cho.</a></div></div></div><a id="rocket" href="#top" class="show"></a><script type="text/javascript" src="/js/totop.js?v=1.0.0" async></script><script type="text/javascript" src="/js/codeblock-resizer.js?v=1.0.0"></script><script type="text/javascript" src="/js/smartresize.js?v=1.0.0"></script></div></body></html>
